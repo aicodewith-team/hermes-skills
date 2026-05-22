@@ -127,13 +127,66 @@ Includes base styles: header, sections, cards, tables, highlight boxes, timeline
 
 ## Part 2: 使用基础设施
 
+### Security: Sanitize Before Publishing
+
+**ALWAYS run this check before dropping a file into `$ROOT`:**
+
+```bash
+grep -nE "(sk-|whsec_|api_key|password|token|secret|key_value|http://127\.|http://10\.|http://192\.168\.|DATABASE_URL=)" /path/to/file.html
+```
+
+If any line matches, **strip or mask it** before publishing. Never expose:
+- Internal IPs (`127.0.0.1`, `10.x`, `192.168.x`) — replace with `...` or the public URL
+- API keys / secrets — replace with `...`
+- Provider names / model IDs that reveal infrastructure choices — replace with `...`
+- Database connection strings — replace with `...`
+
+**Env var sections in docs are especially dangerous.** When converting markdown to HTML, always replace sensitive values:
+
+```bash
+# Safe: env var names only
+DATABASE_URL=...
+STRIPE_SECRET_KEY=...
+AICODEWITH_API_BASE=...
+
+# Dangerous: actual values exposed
+DATABASE_URL=postgresql://user:pass@host/db
+AICODEWITH_API_BASE=https://api.aicodewith.com
+```
+
 ### Quick Workflow
 
 1. Write HTML page
-2. Drop it in the static files directory (default: `$ROOT`)
-3. Page is live instantly at `https://your-domain.com/<slug>`
+2. **Run sanitization check** (above)
+3. Drop it in the static files directory (default: `$ROOT`)
+4. Page is live instantly at `https://your-domain.com/<slug>`
 
 Link the shared theme, then add page-specific styles.
+
+### Content Structure: Pages Are Presentations, Not Dumps
+
+HTML pages published to the web are for **human readers**, not machines. Think of them as a presentation slide deck or a briefing document — not a technical spec dump.
+
+**Every page must have:**
+
+| Section | Purpose | Example |
+|---|---|---|
+| **Hero** | One sentence that says what this is | "Your AI agent, hosted on Telegram. Zero setup." |
+| **Why** | Why does this exist? Why should the reader care? | Pain point → solution narrative |
+| **How It Works** | Step-by-step flow, visual if possible | 3 steps with arrows or numbered cards |
+| **Comparison / Differentiator** | How is this different from alternatives? | Table or side-by-side cards |
+| **Pricing / Details** | What's the cost, what do they get? | Card grid or table |
+| **FAQ** | Answer the obvious questions | 5-6 Q&A pairs |
+
+**Anti-pattern: raw Markdown → HTML conversion.** Never take a `PLAN.md` or `README.md` and convert it directly to HTML. It reads like internal notes, not a product page. Write narrative HTML from scratch.
+
+**Anti-pattern: too terse.** A page with just one hero section and nothing else is not a presentation. The reader needs context — why, how, compared to what, how much.
+
+**When converting from internal docs to public pages:**
+1. Strip all internal details (env vars with values, internal URLs, model names, database connection strings)
+2. Rewrite technical schemas as visual diagrams or flow descriptions
+3. Add narrative context between sections — don't just list facts
+4. Run the sanitization grep before publishing
 
 ### Must-Have CSS Fixes
 
@@ -200,14 +253,31 @@ Always test on mobile before shipping. Pages that look perfect at desktop routin
 
 ### Pitfalls
 
+- **DON'T DEBUG THE INFRASTRUCTURE IF IT ALREADY WORKS.** If the domain already serves pages, the reverse proxy, DNS, and serve.py are proven. Do NOT port-scan, check firewall rules, try SSH tunnels, spin up test HTTP servers, or reconfigure Traefik. Just write the HTML and drop it in `$ROOT`. The page goes live in under a second. Checking infrastructure when it works wastes time and frustrates the user. The rule is: if `curl https://your-domain.com/existing-page` returns 200, the infra is fine — write your file and move on.
+
+- **Write a proper HTML page, not a markdown dump.** Never convert a README.md or PLAN.md to HTML verbatim and publish it. Technical docs have no introduction, no narrative flow, no readability — they're spec dumps. Write a real page: hero section that says what this is, sections that explain it in plain language, a comparison table if relevant, FAQ. Use the shared theme.css utility classes (`.card`, `.card-grid`, `.highlight-box`, `.table-wrap`, `.flow-steps`) — they're there to make pages look good with minimal effort.
+
+- **Dokploy/Traefik environments**: Do NOT install Caddy or Nginx when Dokploy already manages Traefik. The `dokploy-network` overlay handles inter-container routing — just add a dynamic config YAML to `/etc/dokploy/traefik/dynamic/` with the appropriate `Host()` rule pointing to your container. Adding a second reverse proxy causes port conflicts on 80/443.
+
+- **Sanitize before publishing**: Always grep for `sk-`, `whsec_`, internal IPs, provider names in env vars, and database connection strings before dropping a file. See "Security: Sanitize Before Publishing" above.
+
+- **Docker overlay networks**: Containers must be on `dokploy-network` (or the Traefik network) for Traefik to reach them. Use `docker network connect`.
+
 - **Server crash → 502**: If `serve.py` dies, watchdog auto-restarts within 1 minute
+
 - **Code blocks garbled**: Missing `white-space: pre-wrap` — browsers collapse whitespace
+
 - **Mobile layout broken**: Side-by-side columns don't stack — add `@media` query
+
 - **Long lines overflow**: Paths/URLs break layout — add `word-break: break-word`
+
 - **Footer links stale**: When adding pages, update nav links on ALL pages in the chain
+
 - **File encoding**: HTML files must be UTF-8
+
 - **Path casing**: URLs are case-sensitive. `/Org-OS` won't match `org-os.html`
-- **Container restart**: If using Docker, ensure the serve.py process binds to `0.0.0.0`
+
+- **Feishu Markdown links: never wrap URLs in `**bold**`.** When sharing a published URL in a Feishu/Lark message, write the URL bare — `https://example.com/page` — not `**https://example.com/page**`. Feishu's Markdown renderer pulls the `**` asterisks into the clickable link, breaking it. This applies to all Feishu-facing communication, not just published pages.
 
 ## References
 
