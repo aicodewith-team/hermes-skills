@@ -1,0 +1,172 @@
+/* ===== Interaction Components Shared CSS ===== */
+/* 所有交互式决策 HTML 页面引用此文件 */
+
+/* --- Single Choice (radio cards) --- */
+.choice-group { display: flex; flex-direction: column; gap: 10px; }
+.choice-card {
+  border: 2px solid var(--border); border-radius: 10px;
+  padding: 16px 20px; cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: flex-start; gap: 12px; user-select: none;
+}
+.choice-card:hover { border-color: var(--accent2); background: #faf5ff; }
+.choice-card.selected { border-color: var(--accent); background: #f5f0ff; }
+.choice-card .radio-dot {
+  width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border);
+  flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.choice-card.selected .radio-dot { border-color: var(--accent); background: var(--accent); }
+.choice-card.selected .radio-dot::after { content: ""; width: 6px; height: 6px; background: #fff; border-radius: 50%; }
+.choice-card .choice-title { font-size: 14px; font-weight: 600; color: #111; }
+.choice-card .choice-hint { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+/* --- Multiple Choice (check cards) --- */
+.check-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.check-card {
+  border: 2px solid var(--border); border-radius: 10px;
+  padding: 14px 18px; cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; gap: 10px; user-select: none;
+}
+.check-card:hover { border-color: var(--accent2); }
+.check-card.checked { border-color: var(--accent); background: #f5f0ff; }
+.check-card .check-icon {
+  width: 20px; height: 20px; border-radius: 4px; border: 2px solid var(--border);
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: transparent; transition: all 0.15s;
+}
+.check-card.checked .check-icon { border-color: var(--accent); background: var(--accent); color: #fff; }
+.check-card .check-label { font-size: 14px; color: var(--text); }
+
+/* --- Drag & Drop Sort --- */
+.drag-list { display: flex; flex-direction: column; gap: 0; }
+.drag-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; background: var(--surface);
+  border: 2px solid var(--border); border-radius: 10px;
+  cursor: grab; transition: all 0.15s; user-select: none;
+  position: relative;
+}
+.drag-item:hover { border-color: var(--accent2); }
+.drag-item.dragging { opacity: 0.35; transform: scale(0.98); }
+.drag-item.drag-over-before::before {
+  content: "";
+  position: absolute; top: -4px; left: 8px; right: 8px; height: 3px;
+  background: var(--accent); border-radius: 2px;
+  pointer-events: none;
+}
+.drag-item.drag-over-after::after {
+  content: "";
+  position: absolute; bottom: -4px; left: 8px; right: 8px; height: 3px;
+  background: var(--accent); border-radius: 2px;
+  pointer-events: none;
+}
+.drag-handle { color: var(--text2); font-size: 16px; flex-shrink: 0; cursor: grab; }
+.drag-rank {
+  width: 24px; height: 24px; border-radius: 50%; background: var(--accent);
+  color: #fff; font-size: 12px; font-weight: 700; display: flex;
+  align-items: center; justify-content: center; flex-shrink: 0;
+}
+.drag-text { flex: 1; font-size: 14px; color: var(--text); }
+
+/* --- Toggle Switch --- */
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; background: var(--surface); border-radius: 10px;
+  border: 1px solid var(--border); margin-bottom: 8px;
+}
+.toggle-label { font-size: 14px; font-weight: 600; color: #111; }
+.toggle-hint { font-size: 12px; color: var(--text2); }
+.toggle-switch {
+  width: 48px; height: 28px; background: var(--border); border-radius: 14px;
+  position: relative; cursor: pointer; transition: background 0.2s; flex-shrink: 0;
+}
+.toggle-switch.on { background: var(--green); }
+.toggle-switch::after {
+  content: ""; position: absolute; top: 3px; left: 3px;
+  width: 22px; height: 22px; background: #fff; border-radius: 50%;
+  transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+.toggle-switch.on::after { transform: translateX(20px); }
+
+/* --- Range Slider --- */
+.slider-group { padding: 12px 0; }
+.slider-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.slider-header .slider-label { font-size: 14px; font-weight: 600; color: #111; }
+.slider-header .slider-value { font-size: 14px; font-weight: 700; color: var(--accent); }
+.slider-bar {
+  width: 100%; height: 6px; background: var(--surface2); border-radius: 3px;
+  position: relative; cursor: pointer; outline: none;
+  -webkit-appearance: none; appearance: none;
+}
+.slider-bar::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent); cursor: pointer; border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+.slider-ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+/* --- Conditional Expand --- */
+.conditional-child { margin-left: 20px; padding-left: 16px; border-left: 2px solid var(--accent2); display: none; }
+.conditional-child.visible { display: block; }
+
+/* --- Text Input --- */
+.text-input {
+  width: 100%; padding: 12px 16px; border: 2px solid var(--border);
+  border-radius: 8px; font-size: 15px; font-family: inherit;
+  transition: border-color 0.2s; outline: none; color: var(--text);
+  box-sizing: border-box; margin-top: 8px;
+}
+.text-input:focus { border-color: var(--accent); }
+.text-input::placeholder { color: #c0c0c0; }
+
+/* --- Export Section --- */
+.export-section {
+  margin-top: 48px; padding: 28px; background: var(--surface);
+  border: 2px solid var(--accent); border-radius: 12px; text-align: center;
+}
+.export-section h3 { font-size: 18px; color: #111; margin-bottom: 8px; }
+.export-section p { font-size: 13px; color: var(--text2); margin-bottom: 16px; }
+.export-btn {
+  display: inline-block; padding: 12px 32px; background: var(--accent);
+  color: #fff; border: none; border-radius: 8px; font-size: 15px;
+  font-weight: 600; cursor: pointer; transition: background 0.2s; font-family: inherit;
+}
+.export-btn:hover { background: #6d28d9; }
+
+/* --- Result Block (markdown output) --- */
+.result-block {
+  background: #1a1a2e; border-radius: 12px; padding: 24px; margin-top: 20px;
+  display: none; text-align: left;
+}
+.result-block.show { display: block; }
+.result-block pre {
+  color: #e4e4ec; font-family: "SF Mono","Fira Code",monospace;
+  font-size: 13px; line-height: 1.8; white-space: pre-wrap; word-break: break-word; margin: 0;
+}
+.result-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+}
+.result-header span { color: #a78bfa; font-size: 16px; font-weight: 600; }
+.copy-btn {
+  padding: 6px 16px; background: #6c5ce7; color: #fff; border: none;
+  border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.copy-btn:hover { background: #5a4bd1; }
+.copy-btn.copied { background: var(--green); }
+
+/* --- Progress Bar (for multi-step wizards) --- */
+.progress-bar {
+  height: 6px; background: var(--surface2); border-radius: 3px;
+  margin-bottom: 32px; overflow: hidden;
+}
+.progress-fill {
+  height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent));
+  border-radius: 3px; transition: width 0.4s ease;
+}
+
+/* --- Responsive --- */
+@media (max-width: 640px) {
+  .check-group { grid-template-columns: 1fr; }
+  .toggle-row { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .conditional-child { margin-left: 8px; padding-left: 12px; }
+}
