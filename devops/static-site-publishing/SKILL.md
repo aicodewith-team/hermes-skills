@@ -80,15 +80,13 @@ nginx :80 (容器内 root 启动)
 
 ## ⚠️ 主题规则（必读）
 
-本 Skill 覆盖 **两个域**，**不同主题**，**绝不能混用**：
+本 Skill 覆盖 `hermes-daqiezi.mergio.dev`，**必须引用亮色主题**：
 
-| 域 | 主题 | CSS | 用途 |
-|---|------|-----|------|
-| `hermes-daqiezi.mergio.dev` | **亮色（默认）** | `/theme.css`（白底 `#ffffff`） | 内部报告、交互表单、任务结果 |
-| `mergio.ai/seo/` 或主站 | **暗色终端风** | 自写暗色变量（黑底 `#0a0a0f`） | 匹配 mergio.ai 主站暗色终端风格 |
+| 域 | 主题 | CSS |
+|---|------|-----|
+| `hermes-daqiezi.mergio.dev` | **亮色（默认）** | `/theme.css`（白底 `#ffffff`） |
 
-**铁律：hermes-daqiezi 的页面必须引用 theme.css（亮色），不能自己写暗色样式。**
-mergio.ai 的 SEO 页面才走暗色终端风，由 `nextjs-blog-ssg` skill 管理，不走本 Skill。
+**铁律：页面必须引用 theme.css（亮色），不能自己写暗色样式。**
 
 ## Part 1: 页面类型与规范
 
