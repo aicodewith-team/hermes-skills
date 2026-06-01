@@ -33,10 +33,11 @@ metadata:
 
 ## 核心行为规则
 
-1. **任务完成默认出 HTML 报告** — 做完任何有产出的任务，生成 HTML 报告页发布公网。飞书里只发链接 + 一句话，不堆字。
-2. **复杂决策用交互表单** — 需要用户选型/排序/确认时，生成交互式 HTML 表单，不走飞书追问。末尾必须有「导出 Markdown」按钮。
-3. **发布前必然 sanitization** — 公网可见，绝对不能不检查就发。
-4. ⚠️ **这不是 MERGIO 公开博客** — 这是大茄子（Hermes Agent）的私有任务报告站。MERGIO 产品公开博客使用 `mergio-blog-ssg` skill（SSG + Next.js pages，和主站共享 layout）。不要把产品博客文章发到这个域名。
+1. **第一块内容必是前因** — 任何报告的第一块实质内容（header 之后）必须是「这件事是怎么来的」。讲清楚：之前发生了什么、讨论了什么、为什么走到这一步。这不是可选项——没有前因的报告像从天而降，读者不知道你在回什么。参考链接必须在正文中引用，不是堆在 footer。
+2. **任务完成默认出 HTML 报告** — 做完任何有产出的任务，生成 HTML 报告页发布公网。飞书里只发链接 + 一句话，不堆字。
+3. **复杂决策用交互表单** — 需要用户选型/排序/确认时，生成交互式 HTML 表单，不走飞书追问。末尾必须有「导出 Markdown」按钮。
+4. **发布前必然 sanitization** — 公网可见，绝对不能不检查就发。
+5. ⚠️ **这不是 MERGIO 公开博客** — 这是大茄子（Hermes Agent）的私有任务报告站。MERGIO 产品公开博客使用 `mergio-blog-ssg` skill（SSG + Next.js pages，和主站共享 layout）。不要把产品博客文章发到这个域名。
 
 ## 快速参考
 
@@ -96,12 +97,13 @@ nginx :80 (容器内 root 启动)
 
 给人看的，不是技术文档裸转。**必须包含以下结构:**
 
-1. **Hero** — 一句话说清这是什么
-2. **Why** — 为什么需要这个东西（痛点）
-3. **How It Works** — 怎么运行的（流程图/步骤）
-4. **对比 / 卖点** — 和竞品或现状的区别
-5. **定价** (如适用)
-6. **FAQ** — 常见疑问
+1. **前因（header 之后第一个 section）** — 这件事是怎么来的。引用相关的前序报告/讨论，讲清楚因果关系。读者看完这一段就知道「为什么有这份报告」。
+2. **Hero** — 一句话说清这是什么
+3. **Why** — 为什么需要这个东西（痛点）
+4. **How It Works** — 怎么运行的（流程图/步骤）
+5. **对比 / 卖点** — 和竞品或现状的区别
+6. **定价** (如适用)
+7. **FAQ** — 常见疑问
 
 要讲前因后果，让读者看完就理解这个产品是干什么的、为什么选择它。
 
@@ -195,16 +197,33 @@ JS: 检查选中项后 `child.classList.toggle('visible', condition)`
 
 任务完成后的成果展示页。结构模板：
 
-1. **结果摘要** — 一句话 + 关键数字（用时、文件数、测试通过率等）
-2. **做了什么** — 3-5 个 bullet，每个一句话
-3. **关键产出** — 文件清单、链接、截图
-4. **验证方法** — 用户怎么确认成果（curl 命令、URL、截图）
+1. **前因（可选但推荐）** — 简短一句话「这个任务是从哪个讨论/Issue 来的」
+2. **结果摘要** — 一句话 + 关键数字（用时、文件数、测试通过率等）
+3. **做了什么** — 3-5 个 bullet，每个一句话
+4. **关键产出** — 文件清单、链接、截图
+5. **验证方法** — 用户怎么确认成果（curl 命令、URL、截图）
 
 风格：简洁直给，不展开讨论，不放过程细节。
 
 ---
 
 ## Part 2: 发布流程
+
+### 既有 HTML 报告找回 / 内容核验
+
+当用户说某份 HTML 报告「没有了」「被修改了」「不是原来那份」时，**不要只按文件名找到一个 HTTP 200 页面就宣告找回成功**。同一主题常同时存在策略版、内容核心版、工程落地版、代码差距审计版、外链调研版和最终汇总版。
+
+必须执行：
+1. 搜静态报告根目录中的相近主题页面；
+2. 用 `session_search` 搜历史会话中的概念词，而不是只搜猜测的 slug；
+3. 读取候选页面的标题、目录和代表性正文；
+4. 按「战略 / 内容系统 / 分发外链 / 工程实现 / 审计」分类；
+5. 验证候选公网 URL 为 HTTP 200；
+6. 给用户 artifact map，明确哪份最接近，以及内容是否散落在多份报告中。
+
+⚠️ **文件名级恢复 ≠ 内容级恢复。** 例如标题叫「营销计划」的页面，正文可能已经偏向代码差距和工程排期，并不等于用户要找的内容核心。
+
+完整检索手册见：`references/report-retrieval.md`。
 
 ### Step 1: ⚠️ 先加载此 Skill — 不要凭记忆操作
 
@@ -369,16 +388,15 @@ HTTP 200 = 上线成功。
 }
 ```
 
-### Code Block & 目录树
+### Maintenance / PR Process Sections for Planning Reports
 
-完整 CSS 模板见 Step 2 的「需在页面 `<style>` 里自建的类」段落，从那里复制。
+When publishing an HTML planning report for architecture governance, docs governance, or phased remediation work, include explicit sections for:
 
-关键规则：
-- 代码块用 `<div class="code-block">`，目录树用 `<pre class="dir-tree">`
-- `<pre>` 自带 `white-space: pre`，目录树不需要额外处理换行；`<div>` 需要 `white-space: pre-wrap`
-- 字体栈必须明确 — 裸 `monospace` 在 Linux 上会导致 box-drawing 字符 `├` `─` `└` 宽度错位，连线断开
+1. **Development/testing standards** — RGR, test-failure root-cause classification, no fallback without reproduction, secret/env read prohibition, local-vs-production state separation, test layers (unit/integration/E2E/smoke).
+2. **Documentation maintenance mechanism** — a proposed `docs/documentation-maintenance.md`, post-task doc-review workflow, PR-before-submit checklist, and required `Documentation Impact` block.
 
----
+For this user's Phase-style reports, do not stop at listing deliverable docs (`architecture.md`, `runbook.md`, etc.). Also explain how those docs stay current after each code change and before each PR. The user specifically requested that PR rules be sedimented into the HTML report, not merely mentioned in chat.
+
 
 ## Part 4: nginx 运维
 
