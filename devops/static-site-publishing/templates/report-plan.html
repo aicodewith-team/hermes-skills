@@ -1,0 +1,75 @@
+<!--
+  执行计划报告内容模板
+  使用方式：复制 report-base.html → 将 {{CONTENT}} 替换为此模板内容
+  适用场景：功能开发计划、架构迁移计划、分阶段实施方案
+-->
+<!-- ═══ {{CONTENT}} 替换为以下内容 ═══ -->
+
+  <!-- 一句话结论 -->
+  <section>
+    <h2>🎯 一句话结论</h2>
+    <div class="highlight-box">
+      <strong>目标：</strong><!-- 这个计划要达成什么，为什么现在是合适时机 -->
+    </div>
+  </section>
+
+  <!-- 当前状态 -->
+  <section>
+    <h2>📍 当前状态</h2>
+    <!-- 现状描述 -->
+    <!--
+    <div class="card-grid">
+      <div class="card"><h4>✅ 已有</h4><ul><li>...</li></ul></div>
+      <div class="card"><h4>❌ 缺失</h4><ul><li>...</li></ul></div>
+    </div>
+    -->
+  </section>
+
+  <!-- 目标架构（如有架构变更） -->
+  <!--
+  <section>
+    <h2>🏗️ 目标架构</h2>
+    <div class="arch-diagram">
+      <div class="arch-layer" style="border-left:3px solid var(--accent)"><h4>Layer 1</h4><p>描述</p></div>
+      <div class="arch-arrow">↓</div>
+      <div class="arch-layer" style="border-left:3px solid var(--blue)"><h4>Layer 2</h4><p>描述</p></div>
+    </div>
+  </section>
+  -->
+
+  <!-- 分阶段执行计划 -->
+  <section>
+    <h2>📅 执行计划</h2>
+    <!--
+    <h3>Phase 1：<!-- 名称 → 时间 --></h3>
+    <p>目标：...</p>
+    <div class="step"><div class="step-num">1</div><div class="step-body"><strong>任务标题</strong><p>细节</p></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-body"><strong>任务标题</strong><p>细节</p></div></div>
+
+    <h3>Phase 2：<!-- 名称 → 时间 --></h3>
+    ...
+    -->
+  </section>
+
+  <!-- 工程改造清单（如涉及代码） -->
+  <!--
+  <section>
+    <h2>🔧 工程改造清单</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>文件</th><th>改动</th><th>优先级</th></tr></thead>
+        <tbody>
+          <tr><td><span class="codespan">path/to/file</span></td><td>描述</td><td><span class="tag tag-crit">P0</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  -->
+
+  <!-- 验收标准 -->
+  <section>
+    <h2>✅ 验收标准</h2>
+    <ul>
+      <!-- <li><strong>标准名：</strong>可量化的通过条件</li> -->
+    </ul>
+  </section>

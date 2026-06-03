@@ -1,0 +1,143 @@
+<!--
+  ═══════════════════════════════════════════════════════════
+   Codex 任务进度追踪器 · 通用模板 v2（模板/数据分离）
+   模板（此文件）：CSS + JS + HTML 骨架 — 只读，永不修改
+   数据（issue-{N}-data.html）：Worker sed 唯一写入目标，fetch() 注入
+  ═══════════════════════════════════════════════════════════
+  占位符（Hermes 创建时替换）：
+    {{ISSUE_NUM}}  {{ISSUE_TITLE}}  {{REPO}}  {{ISSUE_URL}}
+    {{REPORT_URL}} → 关联报告页链接（可选，无则留空）
+    {{PHASE_LIST}} → 任务内容层 Phase 列表（从 Issue body ## 📊 任务进度 段生成）
+  ═══════════════════════════════════════════════════════════
+  架构说明：
+    - 模板（issue-{N}.html）：含完整 CSS + 批注 JS + fetch()，永不修改
+    - 数据（issue-{N}-data.html）：含 TRACKER:* / PROGRESS:* 标记 + 日志
+    - Worker/Codex 只 sed 数据文件，不碰模板 → JS 永不被截断
+    - fetch 带 Date.now() 参数绕过浏览器缓存
+  ═══════════════════════════════════════════════════════════
+-->
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Issue #{{ISSUE_NUM}} 进度追踪 · Codex Worker</title>
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    .code-block { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; font-family: "SF Mono","Fira Code","Cascadia Code","JetBrains Mono",monospace; font-size: 13px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; overflow-x: auto; margin: 12px 0; }
+    .codespan { background: var(--surface2); padding: 1px 6px; border-radius: 3px; font-family: "SF Mono","Fira Code","Cascadia Code","JetBrains Mono",monospace; font-size: 12px; }
+    .tag { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 12px; font-weight: 700; margin-right: 4px; }
+    .tag-ok { background: #d4edda; color: #155724; }
+    .tag-warn { background: #fff3cd; color: #856404; }
+    .tag-crit { background: #f8d7da; color: #721c24; }
+    .tag-info { background: #cfe2ff; color: #084298; }
+    .tag-skip { background: #e9ecef; color: #6c757d; text-decoration: line-through; }
+    .tag-running { background: #fef3c7; color: #92400e; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+    .meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 6px 11px; font-size: 12px; color: var(--text2); }
+    .timeline { position: relative; margin: 30px 0; padding-left: 40px; }
+    .timeline::before { content: ""; position: absolute; left: 18px; top: 8px; bottom: 8px; width: 3px; background: var(--border); border-radius: 3px; }
+    .tl-step { position: relative; margin-bottom: 0; min-height: 56px; }
+    .tl-step:last-child { min-height: 40px; }
+    .tl-dot { position: absolute; left: -28px; top: 6px; width: 18px; height: 18px; border-radius: 50%; border: 3px solid var(--border); background: #fff; z-index: 1; transition: all 0.3s; }
+    .tl-step.done .tl-dot { background: var(--green); border-color: var(--green); }
+    .tl-step.running .tl-dot { background: var(--amber); border-color: var(--amber); animation: pulse 2s infinite; }
+    .tl-step.failed .tl-dot { background: var(--red); border-color: var(--red); }
+    .tl-step.skipped .tl-dot { background: var(--border); border-color: var(--border); }
+    .tl-body { font-size: 14px; padding: 6px 0; }
+    .tl-body .tl-label { font-weight: 600; margin-right: 8px; }
+    .tl-body .tl-label.skipped { text-decoration: line-through; color: var(--text2); }
+    .tl-body .tl-time { font-size: 12px; color: var(--text2); margin-left: 8px; }
+    .tl-body .tl-detail { font-size: 12px; color: var(--text2); margin-top: 4px; }
+    .tl-step.skipped .tl-body .tl-detail { text-decoration: line-through; }
+    .divider { border: none; border-top: 2px dashed var(--border); margin: 24px 0 16px 0; position: relative; }
+    .divider::after { content: "Codex stdout → Worker sed 更新 ↓"; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #fff; padding: 0 12px; font-size: 11px; color: var(--text2); white-space: nowrap; }
+    .log-entry { padding: 6px 0; font-size: 13px; border-bottom: 1px solid var(--surface2); }
+    .log-entry:last-child { border-bottom: none; }
+    .log-time { font-size: 11px; color: var(--text2); margin-right: 8px; font-family: "SF Mono","Fira Code",monospace; }
+    .log-note { color: var(--text); }
+    .issue-header { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 24px; }
+    .issue-header .issue-num { font-size: 48px; font-weight: 800; color: var(--accent); line-height: 1; }
+    .issue-header .issue-info { flex: 1; min-width: 200px; }
+    .issue-header .issue-info h1 { margin: 0 0 4px; font-size: 22px; }
+
+    /* 批注系统 */
+    .anno-hl { background: rgba(124,58,237,0.15); border-bottom: 2px solid var(--accent); cursor: pointer; border-radius: 2px; padding: 0 1px; transition: background 0.15s; }
+    .anno-hl:hover { background: rgba(124,58,237,0.28); }
+    #anno-float-btn { position: absolute; z-index: 999; display: none; background: #fff; border: 1.5px solid var(--accent); color: var(--accent); border-radius: 8px; padding: 5px 10px; font-size: 12px; cursor: pointer; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.12); white-space: nowrap; user-select: none; }
+    #anno-float-btn:hover { background: var(--accent); color: #fff; }
+    .anno-card { position: absolute; z-index: 1001; background: #fff; border: 1px solid var(--accent); border-radius: 10px; padding: 12px 14px; width: 340px; box-shadow: 0 4px 20px rgba(0,0,0,0.14); font-size: 13px; }
+    .anno-card .anno-quote { font-size: 12px; color: var(--text2); font-style: italic; margin-bottom: 8px; padding: 4px 8px; background: var(--surface); border-radius: 4px; border-left: 2px solid var(--accent2); line-height: 1.5; max-height: 60px; overflow-y: auto; }
+    .anno-card textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 60px; box-sizing: border-box; }
+    .anno-card textarea:focus { outline: none; border-color: var(--accent); }
+    .anno-card .anno-card-actions { display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end; }
+    .anno-card .anno-card-actions button { padding: 5px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; font-family: inherit; }
+    .anno-card .anno-card-actions .save { background: var(--accent); color: #fff; }
+    .anno-card .anno-card-actions .cancel { background: var(--surface2); color: var(--text); }
+    .anno-tip { position: absolute; z-index: 1002; max-width: 300px; background: #1a1a2e; color: #e4e4ec; padding: 10px 14px; border-radius: 8px; font-size: 13px; line-height: 1.6; box-shadow: 0 4px 16px rgba(0,0,0,0.2); display: none; }
+    .anno-tip::after { content: ""; position: absolute; top: 100%; left: 20px; border: 6px solid transparent; border-top-color: #1a1a2e; }
+    .anno-tip .anno-tip-del { color: var(--red); cursor: pointer; font-size: 11px; margin-top: 6px; display: inline-block; }
+    #anno-bar { position: fixed; top: 16px; right: 16px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 8px 14px; display: flex; align-items: center; gap: 10px; z-index: 1000; box-shadow: 0 2px 12px rgba(0,0,0,0.08); font-size: 13px; }
+    #anno-bar .count { font-weight: 700; color: var(--accent); }
+    #anno-bar button { padding: 4px 10px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; font-family: inherit; background: transparent; color: var(--text2); }
+    #anno-bar button:hover { background: var(--surface); }
+    #anno-bar .export-btn { background: var(--accent); color: #fff; }
+    #anno-bar .export-btn:hover { background: #6d28d9; }
+    #export-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 2000; display: none; align-items: center; justify-content: center; }
+    #export-modal.open { display: flex; }
+    #export-modal .modal-box { background: #fff; border-radius: 12px; padding: 24px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+    #export-modal .modal-box h3 { margin-bottom: 12px; }
+    #export-modal .modal-box pre { background: #1a1a2e; color: #e4e4ec; padding: 16px; border-radius: 8px; font-size: 12px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; max-height: 400px; overflow-y: auto; }
+    #export-modal .copy-btn { background: var(--accent); color: #fff; padding: 8px 18px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit; }
+    #export-modal .close-btn { background: var(--surface2); color: var(--text); padding: 8px 18px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit; }
+    body { }
+    @media (max-width: 640px) {
+      .card-grid { grid-template-columns: 1fr; }
+      .anno-card { width: 260px; }
+      .issue-header { flex-direction: column; gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+<main class="container">
+
+  <!-- ═══ 顶部 ═══ -->
+  <section>
+    <div class="issue-header">
+      <div class="issue-num">#{{ISSUE_NUM}}</div>
+      <div class="issue-info">
+        <h1>{{ISSUE_TITLE}}</h1>
+        <div style="font-size:13px;color:var(--text2)">{{REPO}}</div>
+        <div class="meta" style="margin-top:8px">
+          <span class="pill">🔗 <a href="{{ISSUE_URL}}">GitHub Issue #{{ISSUE_NUM}}</a></span>
+          {{REPORT_URL}}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 动态内容注入区（fetch issue-{N}-data.html → innerHTML） ═══ -->
+  <div id="tracker-data" style="min-height:200px">
+    <p style="color:var(--text2);text-align:center;padding:40px">⏳ 加载中…</p>
+  </div>
+
+  <footer>Hermes × Codex Worker 进度追踪器 · 计划可修正 · F5 刷新 · 模板/数据分离 v2</footer>
+</main>
+
+<!-- ═══ 批注系统 ═══ -->
+<div id="anno-float-btn">💬 批注</div>
+<div class="anno-tip" id="anno-tip"></div>
+<div id="anno-bar"><span>💬</span><span class="count" id="annoCount">0</span><button class="clear-btn" onclick="Anno.clear()">清空</button><button class="export-btn" onclick="Anno.export()">导出</button></div>
+<div id="export-modal"><div class="modal-box"><h3>📋 批注导出</h3><p style="font-size:13px;color:var(--text2);margin-bottom:12px;">复制 Markdown 发送给 Hermes</p><pre id="exportContent"></pre><div class="modal-actions"><button class="close-btn" onclick="Anno.closeModal()">关闭</button><button class="copy-btn" onclick="Anno.copy()">📋 复制到剪贴板</button></div></div></div>
+<script>
+window.Anno=(function(){var e=[],t=document.getElementById("anno-float-btn"),n=document.getElementById("anno-tip"),o=0,i=null,a=null;document.addEventListener("mouseup",function(e){setTimeout(function(){var n=window.getSelection(),o=n.toString().trim();if(!o||o.length<2){h();return}var i=document.querySelector("main.container"),a=n.anchorNode;if(!i||!i.contains(a))return;if(a.closest&&a.closest(".code-block,pre,button,input,textarea,select,.choice-group,.check-group,.drag-list,.toggle-row,.export-section,.result-block,header,footer,#anno-bar,#anno-float-btn,.anno-tip,#export-modal,.anno-card")){h();return}i=n.getRangeAt(0).cloneRange();var r=i.getBoundingClientRect();t.style.display="block";t.style.top=Math.max(0,r.top+window.scrollY-t.offsetHeight-6)+"px";t.style.left=Math.max(0,r.right+window.scrollX-t.offsetWidth)+"px"},10)});t.addEventListener("mousedown",function(e){e.preventDefault();e.stopPropagation();if(!i)return;l(i);h()});function h(){t.style.display="none";i=null}function l(t){r();var n=t.toString().trim();if(!n)return;var o=document.createElement("mark");o.className="anno-hl";o.dataset.pending="1";try{t.surroundContents(o)}catch(e){var i=t.extractContents();o.appendChild(i);t.insertNode(o)}var l=o.getBoundingClientRect();a=document.createElement("div");a.className="anno-card";a.innerHTML='<div class="anno-quote">'+n.replace(/</g,"&lt;").replace(/>/g,"&gt;").substring(0,120)+(n.length>120?"…":"")+'</div><textarea placeholder="输入批注…" rows="2"></textarea><div class="anno-card-actions"><button class="cancel">取消</button><button class="save">保存</button></div>';document.body.appendChild(a);a.style.top=Math.max(0,l.top+window.scrollY-a.offsetHeight-6)+"px";a.style.left=Math.max(10,l.left+window.scrollX)+"px";var d=a.querySelector("textarea");a.querySelector(".save").addEventListener("click",function(){s(n,o,d.value)});a.querySelector(".cancel").addEventListener("click",function(){c(o)});a.addEventListener("mousedown",function(e){e.stopPropagation()});d.addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){e.preventDefault();s(n,o,d.value)}if(e.key==="Escape"){e.preventDefault();c(o)}});setTimeout(function(){d.focus()},50)}function s(e,t,n){var i=n.trim();if(!i){c(t);return}delete t.dataset.pending;var a="a"+(++o),r=d(t);var l={id:a,text:e,note:i,section:r,el:t};e.push(l);t.dataset.noteId=a;t.addEventListener("mouseenter",function(e){u(e,l)});t.addEventListener("mouseleave",function(){m()});r();p();window.getSelection().removeAllRanges()}function c(e){if(e.dataset.pending){var t=e.parentNode;while(e.firstChild)t.insertBefore(e.firstChild,e);t.removeChild(e)}r();window.getSelection().removeAllRanges()}function r(){if(a&&a.parentNode){a.remove();a=null}}function u(e,t){clearTimeout(n._hideTimer);n.innerHTML="<strong>📝</strong> "+t.note.replace(/</g,"&lt;")+'<br><span class="anno-tip-del" onclick="Anno.del(\''+t.id+"')\">🗑 删除</span>";n.style.display="block";var o=t.el.getBoundingClientRect();n.style.top=Math.max(0,o.top+window.scrollY-n.offsetHeight-10)+"px";n.style.left=Math.max(10,o.left+window.scrollX)+"px"}function m(){n._hideTimer=setTimeout(function(){n.style.display="none"},200)}n.addEventListener("mouseenter",function(){clearTimeout(n._hideTimer)});n.addEventListener("mouseleave",function(){m()});function d(e){var t=e.closest("section");if(!t)return"";var n=t.querySelector("h2");return n?n.textContent.trim():""}function p(){document.getElementById("annoCount").textContent=e.length+" 条"}function f(t){for(var n=0;n<e.length;n++){if(e[n].id===t){var o=e[n].el;if(o&&o.parentNode){var i=o.parentNode;while(o.firstChild)i.insertBefore(o.firstChild,o);i.removeChild(o)}e.splice(n,1);break}}n.style.display="none";p()}function v(){if(!e.length)return;if(!confirm("清空全部 "+e.length+" 条批注？"))return;e.forEach(function(e){var t=e.el;if(t&&t.parentNode){var n=t.parentNode;while(t.firstChild)n.insertBefore(t.firstChild,t);n.removeChild(t)}});e=[];p()}function g(){if(!e.length){alert("暂无批注");return}var t=["# 文字批注","","> "+new Date().toLocaleString(),"> 批注数: "+e.length,""];var n={};e.forEach(function(e){var t=e.section||"(页面顶部)";if(!n[t])n[t]=[];n[t].push(e)});for(var o in n){t.push("## "+o);t.push("");n[o].forEach(function(e,n){t.push("**"+(n+1)+".**");t.push("");t.push("> 原文：「"+e.text+"」");t.push("> ");t.push("> "+e.note.replace(/\n/g,"\n> "));t.push("")})}document.getElementById("exportContent").textContent=t.join("\n");document.getElementById("export-modal").classList.add("open")}function w(){document.getElementById("export-modal").classList.remove("open")}function y(){navigator.clipboard.writeText(document.getElementById("exportContent").textContent).then(function(){var e=document.querySelector("#export-modal .copy-btn");e.textContent="✅ 已复制！";setTimeout(function(){e.textContent="📋 复制到剪贴板"},2e3)})}document.addEventListener("keydown",function(e){if(e.key==="Escape"){w();h();r();n.style.display="none"}});document.addEventListener("mousedown",function(e){if(!e.target.closest(".anno-hl")&&!e.target.closest("#anno-float-btn")&&!e.target.closest(".anno-tip")&&!e.target.closest(".anno-card")){h();n.style.display="none"}});document.getElementById("export-modal").addEventListener("mousedown",function(e){if(e.target===this)w()});return{clear:v,export:g,closeModal:w,copy:y,del:f}})();
+
+// ═══ 加载动态数据（从 issue-{N}-data.html） ═══
+fetch('issue-{{ISSUE_NUM}}-data.html?' + Date.now())
+  .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text()})
+  .then(function(html){document.getElementById('tracker-data').innerHTML=html})
+  .catch(function(err){document.getElementById('tracker-data').innerHTML='<p style="color:var(--red);text-align:center;padding:40px">⚠️ 数据加载失败：'+err.message+'</p>'});
+</script>
+</body>
+</html>

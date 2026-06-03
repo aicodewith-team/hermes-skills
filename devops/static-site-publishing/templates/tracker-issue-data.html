@@ -1,0 +1,71 @@
+<!--
+  ═══════════════════════════════════════════════════
+  DATA FILE — Worker/Codex 唯一写入目标
+  模板 issue-{N}.html 通过 fetch() 加载此文件注入 DOM
+  永远不要碰模板文件！只 sed 这个文件。
+
+  占位符：{{PHASE_LIST}} — Hermes 创建时从 Issue body 生成
+  ═══════════════════════════════════════════════════
+-->
+<!-- ═══════════ 基础设施层 ═══════════ -->
+<section>
+  <h2>⚙️ Worker 基础设施</h2>
+  <div class="timeline">
+    <div class="tl-step"><div class="tl-dot"></div>
+      <div class="tl-body">
+        <!-- TRACKER:created --><span class="tag tag-info">⌛ 等待中</span><!-- /TRACKER:created -->
+        <span class="tl-label">Issue 已创建</span>
+      </div>
+    </div>
+    <div class="tl-step"><div class="tl-dot"></div>
+      <div class="tl-body">
+        <!-- TRACKER:claimed --><span class="tag tag-info">⌛ 等待中</span><!-- /TRACKER:claimed -->
+        <span class="tl-label">Worker 已认领</span>
+      </div>
+    </div>
+    <div class="tl-step"><div class="tl-dot"></div>
+      <div class="tl-body">
+        <!-- TRACKER:context --><span class="tag tag-info">⌛ 等待中</span><!-- /TRACKER:context -->
+        <span class="tl-label">CONTEXT.md 已生成</span>
+      </div>
+    </div>
+    <div class="tl-step"><div class="tl-dot"></div>
+      <div class="tl-body">
+        <!-- TRACKER:codex --><span class="tag tag-info">⌛ 等待中</span><!-- /TRACKER:codex -->
+        <span class="tl-label">Codex 执行</span>
+      </div>
+    </div>
+    <div class="tl-step"><div class="tl-dot"></div>
+      <div class="tl-body">
+        <!-- TRACKER:pr --><span class="tag tag-info">⌛ 等待中</span><!-- /TRACKER:pr -->
+        <span class="tl-label">提交 Pull Request</span>
+      </div>
+    </div>
+    <div class="tl-step"><div class="tl-dot"></div>
+      <div class="tl-body">
+        <!-- TRACKER:done --><span class="tag tag-info">⌛ 等待中</span><!-- /TRACKER:done -->
+        <span class="tl-label">审核完成</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ═══════════ 任务内容层 ═══════════ -->
+<section>
+  <h2>📊 任务进度 <span style="font-size:12px;color:var(--text2);font-weight:400">（Codex 输出 HERMES_PROGRESS: → Worker 更新）</span></h2>
+  <div class="timeline">
+    {{PHASE_LIST}}
+  </div>
+</section>
+
+<!-- ═══════════ 执行日志 ═══════════ -->
+<section>
+  <h2>📝 执行日志</h2>
+  <!-- LOG:NEXT --><!-- /LOG:NEXT -->
+</section>
+
+<!-- ═══════════ 隐藏标记 ═══════════ -->
+<div style="display:none"><!-- TRACKER:failed --><!-- /TRACKER:failed --></div>
+<div style="display:none"><!-- TRACKER:pr_info --><!-- /TRACKER:pr_info --></div>

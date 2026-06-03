@@ -1,0 +1,211 @@
+<!--
+  ═══════════════════════════════════════════════════════════
+   Hermes 交互组件库 v1 — 统一模板
+  ═══════════════════════════════════════════════════════════
+  使用方式：
+  1. 页面 <head> 加: <link rel="stylesheet" href="/interaction.css">
+  2. 从下方「组件 HTML」区域复制需要的组件代码
+  3. 从下方「组件 JS」区域复制 <script> 整段到底部（</body> 前）
+  4. 在页面自己的 <script> 里用 HermesIO.register() 注册导出字段
+
+  硬性约束：
+  - CSS 来自 /interaction.css，不要在页面 <style> 里重新定义
+  - JS 从下方照抄，不要手写。手写必出 bug
+  - 导出 Markdown 格式：标题 > 时间戳 > 分类回答 >「需要我做什么」
+  ═══════════════════════════════════════════════════════════
+-->
+
+<!--
+  ═══ STEP 1: CSS（加在 <head>） ═══
+  <link rel="stylesheet" href="/interaction.css">
+-->
+
+<!-- ═══ STEP 2: 组件 HTML ═══ -->
+
+<!-- 2.1 单选卡片 -->
+<!--
+<div class="choice-group" id="q_xxx">
+  <div class="choice-card" onclick="pickOne(this,'q_xxx')">
+    <div class="radio-dot"></div>
+    <div><div class="choice-title">选项名</div><div class="choice-hint">描述</div></div>
+  </div>
+</div>
+-->
+
+<!-- 2.2 复选卡片 — 不要用 <label>！ -->
+<!--
+<div class="check-group" id="q_yyy">
+  <div class="check-card" onclick="this.classList.toggle('checked')">
+    <div class="check-icon">✓</div><span class="check-label">选项名</span>
+  </div>
+</div>
+-->
+
+<!-- 2.3 拖拽排序 -->
+<!--
+<div class="drag-list" id="q_zzz">
+  <div class="drag-item" draggable="true">
+    <span class="drag-handle">⠿</span>
+    <span class="drag-rank">1</span>
+    <span class="drag-text">排序项</span>
+  </div>
+</div>
+-->
+
+<!-- 2.4 开关 -->
+<!--
+<div class="toggle-row">
+  <div><div class="toggle-label">功能名</div><div class="toggle-hint">说明</div></div>
+  <div class="toggle-switch" onclick="this.classList.toggle('on')"></div>
+</div>
+-->
+
+<!-- 2.5 滑块 -->
+<!--
+<div class="slider-group">
+  <div class="slider-header"><span class="slider-label">名称</span><span class="slider-value" id="val_x">50</span></div>
+  <input type="range" class="slider-bar" min="0" max="100" value="50" oninput="document.getElementById('val_x').textContent=this.value">
+  <div class="slider-ticks"><span>0</span><span>50</span><span>100</span></div>
+</div>
+-->
+
+<!-- 2.6 条件展开 -->
+<!-- <div class="conditional-child" id="cond_x">条件满足时显示</div> -->
+
+<!-- 2.7 文本输入 -->
+<!-- <input class="text-input" id="input_x" placeholder="请输入..."> -->
+
+<!-- 2.8 导出区 — 必须放最底部 -->
+<!--
+<div class="export-section">
+  <h3>📋 导出 Markdown</h3>
+  <p>操作完成后点此按钮</p>
+  <button class="export-btn" onclick="HermesIO.export()">✨ 导出 Markdown</button>
+</div>
+<div class="result-block" id="exportResult">
+  <div class="result-header"><span>📋 生成结果</span><button class="copy-btn" id="copyBtn" onclick="HermesIO.copy()">复制</button></div>
+  <pre id="exportOutput"></pre>
+</div>
+-->
+
+
+<!-- ═══ STEP 3: 组件 JS — 照抄整段到 </body> 前 ═══ -->
+<script>
+/* Hermes 交互组件库 v1 — 从 templates/interaction-components.html 照抄 */
+
+function pickOne(el, groupId) {
+  document.querySelectorAll('#' + groupId + ' .choice-card').forEach(function(c) { c.classList.remove('selected'); });
+  el.classList.add('selected');
+}
+
+window.HermesIO = (function() {
+  var _fields = [];
+  return {
+    register: function(title, getter) { _fields.push({title: title, getter: getter}); },
+
+    getSelected: function(groupId) {
+      var el = document.querySelector('#' + groupId + ' .choice-card.selected');
+      return el ? el.querySelector('.choice-title').textContent.trim() : null;
+    },
+
+    getChecked: function(groupId) {
+      var items = [];
+      document.querySelectorAll('#' + groupId + ' .check-card.checked').forEach(function(c) {
+        items.push(c.querySelector('.check-label').textContent.trim());
+      });
+      return items;
+    },
+
+    getDragOrder: function(listId) {
+      var items = [];
+      document.querySelectorAll('#' + listId + ' .drag-text').forEach(function(el) { items.push(el.textContent.trim()); });
+      return items;
+    },
+
+    getToggles: function(containerId) {
+      var items = [];
+      document.querySelectorAll('#' + containerId + ' .toggle-row').forEach(function(row) {
+        items.push({ label: row.querySelector('.toggle-label').textContent.trim(), on: row.querySelector('.toggle-switch').classList.contains('on') });
+      });
+      return items;
+    },
+
+    export: function() {
+      var lines = ['# 决策结果', '', '> ' + new Date().toISOString().slice(0, 10), ''];
+      _fields.forEach(function(f) {
+        var val = f.getter();
+        lines.push('## ' + f.title);
+        if (val === null || val === undefined) lines.push('- _(未选择)_');
+        else if (Array.isArray(val)) { if (!val.length) lines.push('- _(未选择)_'); else val.forEach(function(x,i) { lines.push((i+1)+'. '+x); }); }
+        else if (typeof val === 'object') val.forEach(function(x) { lines.push('- '+x.label+': '+(x.on?'✅ 是':'⬜ 否')); });
+        else lines.push('- ' + val);
+        lines.push('');
+      });
+      lines.push('## 需要我做什么'); lines.push(''); lines.push('> （在这里写你希望 Hermes 接下来做什么）'); lines.push('');
+      document.getElementById('exportOutput').textContent = lines.join('\n');
+      document.getElementById('exportResult').classList.add('show');
+      document.getElementById('exportResult').scrollIntoView({behavior:'smooth'});
+    },
+
+    copy: function() {
+      navigator.clipboard.writeText(document.getElementById('exportOutput').textContent).then(function() {
+        var btn = document.getElementById('copyBtn'); btn.textContent = '✅ 已复制'; btn.classList.add('copied');
+        setTimeout(function() { btn.textContent = '复制'; btn.classList.remove('copied'); }, 2000);
+      });
+    }
+  };
+})();
+
+/* 拖拽排序 — 自动绑定所有 .drag-list */
+(function() {
+  document.querySelectorAll('.drag-list').forEach(function(list) {
+    var dragged = null;
+    list.addEventListener('dragstart', function(e) {
+      dragged = e.target.closest('.drag-item');
+      if (!dragged) return;
+      dragged.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', '');
+    });
+    list.addEventListener('dragend', function(e) {
+      var item = e.target.closest('.drag-item');
+      if (item) item.classList.remove('dragging');
+      clearAll(); updateRanks(); dragged = null;
+    });
+    list.addEventListener('dragover', function(e) {
+      e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+      var target = e.target.closest('.drag-item');
+      if (!target || target === dragged) { clearAll(); return; }
+      clearAll();
+      var rect = target.getBoundingClientRect();
+      target.classList.add(e.clientY < rect.top + rect.height/2 ? 'drag-over-before' : 'drag-over-after');
+    });
+    list.addEventListener('dragleave', function(e) {
+      var t = e.target.closest('.drag-item');
+      if (t) { t.classList.remove('drag-over-before', 'drag-over-after'); }
+    });
+    list.addEventListener('drop', function(e) {
+      e.preventDefault();
+      var target = e.target.closest('.drag-item');
+      if (!target || target === dragged) return;
+      var rect = target.getBoundingClientRect();
+      list.insertBefore(dragged, e.clientY < rect.top + rect.height/2 ? target : target.nextSibling);
+      clearAll(); updateRanks();
+    });
+    function clearAll() { list.querySelectorAll('.drag-item').forEach(function(el) { el.classList.remove('drag-over-before','drag-over-after'); }); }
+    function updateRanks() { list.querySelectorAll('.drag-item').forEach(function(el,i) { var r=el.querySelector('.drag-rank'); if(r) r.textContent=i+1; }); }
+  });
+})();
+</script>
+
+<!-- ═══ STEP 4: 页面专属 JS — 注册导出字段 ═══ -->
+<!--
+<script>
+HermesIO.register('技术栈', function() { return HermesIO.getSelected('q_tech'); });
+HermesIO.register('基础设施', function() { return HermesIO.getChecked('q_infra'); });
+HermesIO.register('功能优先级', function() { return HermesIO.getDragOrder('q_priority'); });
+HermesIO.register('功能开关', function() {
+  return HermesIO.getToggles('q_toggles').map(function(t) { return t.label + ': ' + (t.on ? '✅ 是' : '⬜ 否'); });
+});
+</script>
+-->

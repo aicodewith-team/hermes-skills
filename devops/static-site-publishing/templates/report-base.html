@@ -1,0 +1,293 @@
+<!--
+  ═══════════════════════════════════════════════════════════
+   Hermes 统一报告骨架模板 v5
+  ═══════════════════════════════════════════════════════════
+  内置功能：
+  - 精确文字批注：选中文字 → 💬 按钮 → 内联卡片输入 → Enter 保存
+  - Hover 高亮文字查看批注（tooltip），点 🗑 删除
+  - 底部工具栏 → 📋 导出（含原文引用 + 章节上下文）
+  ═══════════════════════════════════════════════════════════
+-->
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{TITLE}}</title>
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    /* ═══ 自建组件 ═══ */
+    .code-block { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; font-family: "SF Mono","Fira Code","Cascadia Code","JetBrains Mono",monospace; font-size: 13px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; overflow-x: auto; margin: 12px 0; }
+    .dir-tree { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; font-family: "SF Mono","Fira Code","Cascadia Code","JetBrains Mono",monospace; font-size: 13px; line-height: 1.7; white-space: pre; overflow-x: auto; margin: 12px 0; color: var(--text); }
+    .dir-tree strong { color: var(--accent); }
+    .codespan { background: var(--surface2); padding: 1px 6px; border-radius: 3px; font-family: "SF Mono","Fira Code","Cascadia Code","JetBrains Mono",monospace; font-size: 12px; }
+    .tag { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 12px; font-weight: 700; margin-right: 4px; }
+    .tag-ok { background: #d4edda; color: #155724; }
+    .tag-gap { background: #fce4d6; color: #c65911; }
+    .tag-new { background: #e2d9f3; color: #6741d9; }
+    .tag-warn { background: #fff3cd; color: #856404; }
+    .tag-crit { background: #f8d7da; color: #721c24; }
+    .tag-info { background: #cfe2ff; color: #084298; }
+    .subtitle { font-size: 16px; color: var(--text2); line-height: 1.7; max-width: 900px; }
+    .meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 6px 11px; font-size: 12px; color: var(--text2); }
+    .arch-diagram { display: flex; flex-direction: column; gap: 14px; margin: 20px 0; font-size: 13px; }
+    .arch-layer { border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; background: var(--surface); }
+    .arch-layer h4 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; color: var(--text2); }
+    .arch-layer p { margin: 0; }
+    .arch-arrow { text-align: center; color: var(--text2); font-size: 18px; margin: -4px 0; }
+    .step { display: flex; gap: 14px; margin: 16px 0; align-items: flex-start; }
+    .step-num { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; flex-shrink: 0; }
+    .step-body { flex: 1; font-size: 14px; line-height: 1.7; }
+    .step-body strong { display: block; margin-bottom: 4px; }
+
+    /* ═══ 文字批注系统 v5 ═══ */
+    .anno-hl { background: rgba(124,58,237,0.15); border-bottom: 2px solid var(--accent); cursor: pointer; border-radius: 2px; padding: 0 1px; transition: background 0.15s; }
+    .anno-hl:hover { background: rgba(124,58,237,0.28); }
+
+    /* 浮动 💬 按钮 */
+    #anno-float-btn { position: absolute; z-index: 999; display: none; background: #fff; border: 1.5px solid var(--accent); color: var(--accent); border-radius: 8px; padding: 5px 10px; font-size: 12px; cursor: pointer; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.12); white-space: nowrap; user-select: none; }
+    #anno-float-btn:hover { background: var(--accent); color: #fff; }
+
+    /* 内联输入卡片 */
+    .anno-card { position: absolute; z-index: 1001; background: #fff; border: 1px solid var(--accent); border-radius: 10px; padding: 12px 14px; width: 340px; box-shadow: 0 4px 20px rgba(0,0,0,0.14); font-size: 13px; }
+    .anno-card .anno-quote { font-size: 12px; color: var(--text2); font-style: italic; margin-bottom: 8px; padding: 4px 8px; background: var(--surface); border-radius: 4px; border-left: 2px solid var(--accent2); line-height: 1.5; max-height: 60px; overflow-y: auto; }
+    .anno-card textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 60px; box-sizing: border-box; }
+    .anno-card textarea:focus { outline: none; border-color: var(--accent); }
+    .anno-card .anno-card-actions { display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end; }
+    .anno-card .anno-card-actions button { padding: 5px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; font-family: inherit; }
+    .anno-card .anno-card-actions .save { background: var(--accent); color: #fff; }
+    .anno-card .anno-card-actions .cancel { background: var(--surface2); color: var(--text); }
+
+    /* Tooltip — 可交互，不会被鼠标移开立刻消失 */
+    .anno-tip { position: absolute; z-index: 1002; max-width: 300px; background: #1a1a2e; color: #e4e4ec; padding: 10px 14px; border-radius: 8px; font-size: 13px; line-height: 1.6; box-shadow: 0 4px 16px rgba(0,0,0,0.2); display: none; }
+    .anno-tip::after { content: ""; position: absolute; top: 100%; left: 20px; border: 6px solid transparent; border-top-color: #1a1a2e; }
+    .anno-tip .anno-tip-del { color: var(--red); cursor: pointer; font-size: 11px; margin-top: 6px; display: inline-block; }
+
+    /* 右上角浮动工具栏 */
+    #anno-bar { position: fixed; top: 16px; right: 16px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 8px 14px; display: flex; align-items: center; gap: 10px; z-index: 1000; box-shadow: 0 2px 12px rgba(0,0,0,0.08); font-size: 13px; }
+    #anno-bar .count { font-weight: 700; color: var(--accent); }
+    #anno-bar button { padding: 4px 10px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; font-family: inherit; background: transparent; color: var(--text2); }
+    #anno-bar button:hover { background: var(--surface); }
+    #anno-bar .export-btn { background: var(--accent); color: #fff; }
+    #anno-bar .export-btn:hover { background: #6d28d9; }
+
+    /* 导出弹窗 */
+    #export-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 2000; display: none; align-items: center; justify-content: center; }
+    #export-modal.open { display: flex; }
+    #export-modal .modal-box { background: #fff; border-radius: 12px; padding: 24px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+    #export-modal .modal-box h3 { margin-bottom: 12px; }
+    #export-modal .modal-box pre { background: #1a1a2e; color: #e4e4ec; padding: 16px; border-radius: 8px; font-size: 12px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; max-height: 400px; overflow-y: auto; }
+    #export-modal .modal-box .modal-actions { display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end; }
+    #export-modal .copy-btn { background: var(--accent); color: #fff; padding: 8px 18px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit; }
+    #export-modal .close-btn { background: var(--surface2); color: var(--text); padding: 8px 18px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit; }
+
+    body { }
+
+    {{PAGE_CSS}}
+    @media (max-width: 640px) {
+      .branch-container { flex-direction: column !important; }
+      .card-grid { grid-template-columns: 1fr; }
+      .anno-card { width: 260px; }
+      {{MOBILE_CSS}}
+    }
+  </style>
+</head>
+<body>
+<main class="container">
+
+  <section class="header">
+    <div class="badge">{{BADGE}}</div>
+    <h1>{{H1}}</h1>
+    <p class="subtitle">{{SUBTITLE}}</p>
+    {{HEADER_EXTRA}}
+  </section>
+
+  {{CONTENT}}
+
+  <footer>Generated by Hermes · {{DATE}} · <a href="https://hermes-daqiezi.mergio.dev/{{SLUG}}.html">在线版本</a></footer>
+</main>
+
+<!-- ═══ 浮动按钮 + Tooltip + 右上角工具栏 ═══ -->
+<div id="anno-float-btn">💬 批注</div>
+<div class="anno-tip" id="anno-tip"></div>
+
+<div id="anno-bar">
+  <span>💬</span>
+  <span class="count" id="annoCount">0</span>
+  <button class="clear-btn" onclick="Anno.clear()">清空</button>
+  <button class="export-btn" onclick="Anno.export()">导出</button>
+</div>
+
+<div id="export-modal">
+  <div class="modal-box">
+    <h3>📋 批注导出</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">复制 Markdown 发送给 Hermes</p>
+    <pre id="exportContent"></pre>
+    <div class="modal-actions">
+      <button class="close-btn" onclick="Anno.closeModal()">关闭</button>
+      <button class="copy-btn" onclick="Anno.copy()">📋 复制到剪贴板</button>
+    </div>
+  </div>
+</div>
+
+<script>
+window.Anno = (function() {
+  var notes = [], floatBtn = document.getElementById('anno-float-btn'), tip = document.getElementById('anno-tip'), nid = 0, cr = null, card = null;
+
+  /* ── 选中文字 → 浮动按钮 ── */
+  document.addEventListener('mouseup', function(e) {
+    setTimeout(function() {
+      var s = window.getSelection(), t = s.toString().trim();
+      if (!t || t.length < 2) { hideBtn(); return; }
+      var c = document.querySelector('main.container'), n = s.anchorNode;
+      if (!c || !c.contains(n)) return;
+      if (n.closest && n.closest('.code-block,pre,button,input,textarea,select,.choice-group,.check-group,.drag-list,.toggle-row,.export-section,.result-block,header,footer,#anno-bar,#anno-float-btn,.anno-tip,#export-modal,.anno-card')) { hideBtn(); return; }
+      cr = s.getRangeAt(0).cloneRange();
+      var r = cr.getBoundingClientRect();
+      floatBtn.style.display = 'block';
+      fb.style.top = Math.max(0, r.top + window.scrollY - fb.offsetHeight - 6) + 'px';
+      floatBtn.style.left = Math.max(0, r.right + window.scrollX - floatBtn.offsetWidth) + 'px';
+    }, 10);
+  });
+
+  floatBtn.addEventListener('mousedown', function(e) { e.preventDefault(); e.stopPropagation(); if (!cr) return; openCard(cr); hideBtn(); });
+
+  function hideBtn() { floatBtn.style.display = 'none'; cr = null; }
+
+  /* ── 内联输入卡片 ── */
+  function openCard(range) {
+    closeCard();
+    var text = range.toString().trim();
+    if (!text) return;
+
+    /* 高亮文字 */
+    var mark = document.createElement('mark');
+    mark.className = 'anno-hl';
+    mark.dataset.pending = '1';
+    try { range.surroundContents(mark); } catch(e) { var c = range.extractContents(); mark.appendChild(c); range.insertNode(mark); }
+
+    /* 定位卡片在高亮文字下方 */
+    var mr = mark.getBoundingClientRect();
+    card = document.createElement('div');
+    card.className = 'anno-card';
+    card.innerHTML = '<div class="anno-quote">' + text.replace(/</g,'&lt;').replace(/>/g,'&gt;').substring(0, 120) + (text.length>120?'…':'') + '</div>' +
+      '<textarea placeholder="输入批注…" rows="2"></textarea>' +
+      '<div class="anno-card-actions"><button class="cancel">取消</button><button class="save">保存</button></div>';
+    document.body.appendChild(card);
+
+      fb.style.top = Math.max(0, r.top + window.scrollY - fb.offsetHeight - 6) + 'px';
+    card.style.left = Math.max(10, mr.left + window.scrollX) + 'px';
+
+    var ta = card.querySelector('textarea');
+    card.querySelector('.save').addEventListener('click', function() { save(text, mark, ta.value); });
+    card.querySelector('.cancel').addEventListener('click', function() { cancel(mark); });
+    card.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+
+    /* Enter 保存，Esc 取消 */
+    ta.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); save(text, mark, ta.value); }
+      if (e.key === 'Escape') { e.preventDefault(); cancel(mark); }
+    });
+
+    setTimeout(function() { ta.focus(); }, 50);
+  }
+
+  function save(text, mark, noteText) {
+    var nt = noteText.trim();
+    if (!nt) { cancel(mark); return; }
+    delete mark.dataset.pending;
+    var id = 'a' + (++nid), sec = getSec(mark);
+    var note = { id: id, text: text, note: nt, section: sec, el: mark };
+    notes.push(note);
+    mark.dataset.noteId = id;
+    mark.addEventListener('mouseenter', function(e) { showTip(e, note); });
+    mark.addEventListener('mouseleave', function() { hideTip(); });
+    closeCard();
+    upd();
+    window.getSelection().removeAllRanges();
+  }
+
+  function cancel(mark) {
+    if (mark.dataset.pending) {
+      var p = mark.parentNode;
+      while (mark.firstChild) p.insertBefore(mark.firstChild, mark);
+      p.removeChild(mark);
+    }
+    closeCard();
+    window.getSelection().removeAllRanges();
+  }
+
+  function closeCard() { if (card && card.parentNode) { card.remove(); card = null; } }
+
+  /* ── Tooltip ── */
+  function showTip(e, note) {
+    clearTimeout(tip._hideTimer);
+    tip.innerHTML = '<strong>📝</strong> ' + note.note.replace(/</g,'&lt;') +
+      '<br><span class="anno-tip-del" onclick="Anno.del(\'' + note.id + '\')">🗑 删除</span>';
+    tip.style.display = 'block';
+    var r = note.el.getBoundingClientRect();
+    tip.style.top = Math.max(0, r.top + window.scrollY - tip.offsetHeight - 10) + 'px';
+      fb.style.top = Math.max(0, r.top + window.scrollY - fb.offsetHeight - 6) + 'px';
+  }
+
+  function hideTip() {
+    tip._hideTimer = setTimeout(function() { tip.style.display = 'none'; }, 200);
+  }
+  /* tooltip 本身被 hover 时取消隐藏 */
+  tip.addEventListener('mouseenter', function() { clearTimeout(tip._hideTimer); });
+  tip.addEventListener('mouseleave', function() { hideTip(); });
+
+  /* ── 辅助 ── */
+  function getSec(el) {
+    var s = el.closest('section');
+    if (!s) return '';
+    var h = s.querySelector('h2');
+    return h ? h.textContent.trim() : '';
+  }
+  function upd() { document.getElementById('annoCount').textContent = notes.length + ' 条'; }
+
+  /* ── 删除 ── */
+  function del(id) {
+    for (var i = 0; i < notes.length; i++) {
+      if (notes[i].id === id) {
+        var m = notes[i].el;
+        if (m && m.parentNode) { var p = m.parentNode; while (m.firstChild) p.insertBefore(m.firstChild, m); p.removeChild(m); }
+        notes.splice(i, 1); break;
+      }
+    }
+    tip.style.display = 'none'; upd();
+  }
+
+  /* ── 清空 ── */
+  function clear() {
+    if (!notes.length) return;
+    if (!confirm('清空全部 ' + notes.length + ' 条批注？')) return;
+    notes.forEach(function(n) { var m = n.el; if (m && m.parentNode) { var p = m.parentNode; while (m.firstChild) p.insertBefore(m.firstChild, m); p.removeChild(m); } });
+    notes = []; upd();
+  }
+
+  /* ── 导出 ── */
+  function exportNotes() {
+    if (!notes.length) { alert('暂无批注'); return; }
+    var lines = ['# 文字批注', '', '> ' + new Date().toLocaleString(), '> 批注数: ' + notes.length, ''];
+    var g = {};
+    notes.forEach(function(n) { var s = n.section || '(页面顶部)'; if (!g[s]) g[s] = []; g[s].push(n); });
+    for (var s in g) { lines.push('## ' + s); lines.push(''); g[s].forEach(function(n, i) { lines.push('**' + (i+1) + '.**'); lines.push(''); lines.push('> 原文：「' + n.text + '」'); lines.push('> '); lines.push('> ' + n.note.replace(/\n/g, '\n> ')); lines.push(''); }); }
+    document.getElementById('exportContent').textContent = lines.join('\n');
+    document.getElementById('export-modal').classList.add('open');
+  }
+
+  function closeModal() { document.getElementById('export-modal').classList.remove('open'); }
+  function copyExp() { navigator.clipboard.writeText(document.getElementById('exportContent').textContent).then(function() { var b = document.querySelector('#export-modal .copy-btn'); b.textContent = '✅ 已复制！'; setTimeout(function() { b.textContent = '📋 复制到剪贴板'; }, 2000); }); }
+
+  /* ── 全局事件 ── */
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { closeModal(); hideBtn(); closeCard(); tip.style.display = 'none'; } });
+  document.addEventListener('mousedown', function(e) { if (!e.target.closest('.anno-hl') && !e.target.closest('#anno-float-btn') && !e.target.closest('.anno-tip') && !e.target.closest('.anno-card')) { hideBtn(); tip.style.display = 'none'; } });
+  document.getElementById('export-modal').addEventListener('mousedown', function(e) { if (e.target === this) closeModal(); });
+
+  return { clear: clear, export: exportNotes, closeModal: closeModal, copy: copyExp, del: del };
+})();
+</script>
+</body>
+</html>
